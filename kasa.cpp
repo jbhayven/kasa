@@ -74,7 +74,7 @@ void add_new_ticket(const std::string &ticket_name, const int price, int expirat
 
 /**
  * Calculates the cheapest possible ticket set
- * for the given trip lenght.
+ * for the given trip length.
  * 
  * @param   Length of the trip.
  * 
