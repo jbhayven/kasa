@@ -1,4 +1,8 @@
 #include <iostream>
+#include <algorithm>
+#include <map>
+#include <set>
+#include <unordered_set>
 #include <vector>
 #include <string>
 #include <utility>
@@ -10,7 +14,7 @@ using route_info = std::vector< std::pair<std::string, int> >;
 
 // Structure representing a pair <S, R> of a bus stop S
 // lying on the route R.
-using schedule_point = std::pair<std::string, int>
+using schedule_point = std::pair<std::string, int>;
 
 // A map storing information about arrival time for every bus route 'R'
 // and every bus stop 'S' utilized by such route. 
@@ -36,11 +40,11 @@ std::set<int> existing_routes;
  * 
  * @return  The result of validity check. 
  */
-bool is_valid_route(int route_number, const route_info& stops_on_route) {
+bool is_valid_new_route(int route_number, const route_info& stops_on_route) {
     if(existing_routes.count(route_number) > 0)
         return false;
     
-    std::unordered_set<string> visited_stops;
+    std::unordered_set<std::string> visited_stops;
     int last_stop_time = 0;
     
     for(auto i = stops_on_route.begin(); i != stops_on_route.end(); i++) {
@@ -53,22 +57,6 @@ bool is_valid_route(int route_number, const route_info& stops_on_route) {
     if(visited_stops.size() < stops_on_route.size()) return false;
     
     return true;
-}
-
-/**
- * @short Adds a new route
- * 
- * Fulfils a request to add a new route according to the parameters.
- * The validity of the parameters must be checked 
- * before calling this function.
- * 
- * @param   number (unique) of the route to be added
- * @param   a vector of pairs <stop_name, arrival_time> describing the new route   
- */
-void add_new_route(int route_number, const route_info& stops_on_route) {
-    for(auto i = stops_on_route.begin(); i != stops_on_route.end(); i++) {
-        schedule[make_pair(route_number, (*i).first)] = (*i).second;
-    }
 }
 
 /**
@@ -86,6 +74,25 @@ schedule_point create_schedule_point(int route, std::string bus_stop) {
 }
 
 /**
+ * @short Adds a new route
+ * 
+ * Fulfils a request to add a new route according to the parameters.
+ * 
+ * @param   number (unique) of the route to be added
+ * @param   a vector of pairs <stop_name, arrival_time> describing the new route   
+ * 
+ * @return  False if incorrect arguments (in which case nothing was added).
+ *          Otherwise true.
+ */
+bool add_new_route(int route_number, const route_info& stops_on_route) {
+    if(is_valid_new_route(route_number, stops_on_route) == false) return false;
+    for(auto i = stops_on_route.begin(); i != stops_on_route.end(); i++) {
+        schedule[create_schedule_point(route_number, (*i).first)] = (*i).second;
+    }
+    return true;
+}
+
+/**
  * @short Checks whether a schedule_point doesn't exist in the schedule.
  * 
  * Checks whether a schedule_point doesn't exist in the schedule.
@@ -96,6 +103,69 @@ schedule_point create_schedule_point(int route, std::string bus_stop) {
  */
 bool not_scheduled(schedule_point p){
     return schedule.count(p) == 0;
+}
+
+bool check_trip_validity (const std::vector<std::string>& stops, 
+                          const std::vector<int>& routes) 
+{
+    if(stops.size() < 2) return false;
+    if(routes.size() < 1 ) return false;
+    
+    std::vector<schedule_point> departure_points (routes.size());
+    std::transform(routes.begin(), routes.end(), stops.begin(),
+                   departure_points.begin(), create_schedule_point);
+    if(std::any_of(departure_points.begin(), departure_points.end(), 
+                  not_scheduled)) return false;
+                  
+    std::vector<schedule_point> arrival_points (routes.size());
+    std::transform(routes.begin(), routes.end(), ++stops.begin(),
+                   arrival_points.begin(), create_schedule_point);
+    if(std::any_of(arrival_points.begin(), arrival_points.end(), 
+                  not_scheduled)) return false;
+                   
+    int last_time = schedule.at(arrival_points.front());
+    
+    for(auto i = departure_points.begin(), j = arrival_points.begin();
+        i != departure_points.end(); i++, j++)
+    {
+        if(schedule.at(*i) < last_time) return false;
+        last_time = schedule.at(*i);
+         
+        if(schedule.at(*j) < last_time) return false;
+        last_time = schedule.at(*j);
+    }
+    return true;
+}
+
+//WIP
+std::vector< std::string> optimal_ticket_set(int time){
+    int b = time;
+    std::cout << b << std::endl;
+    return {"DZIENNY", "NOWY"};
+}
+
+void write_plan(const std::vector<schedule_point>& departure_points,
+                const std::vector<schedule_point>& arrival_points, 
+                bool no_waiting, std::string where_needs_to_wait)
+{    
+    if(no_waiting == false){
+        std::cout << ":(" << " " << where_needs_to_wait << std::endl;
+    }
+    
+    std::vector< std::string > optimal_tickets =
+        optimal_ticket_set(schedule.at(arrival_points.back()) - 
+                           schedule.at(departure_points.front()));
+
+    if(optimal_tickets.size() == 0) {
+        std::cout << ":|" << std::endl;
+    }
+    else{
+        std::cout << "!" << " " << optimal_tickets.front();
+        for(auto i = ++optimal_tickets.begin(); i != optimal_tickets.end(); i++){
+            std::cout << ";" << " " << (*i);
+        }
+        std::cout << std::endl;
+    }
 }
 
 /**
@@ -112,56 +182,33 @@ bool not_scheduled(schedule_point p){
 bool plan_tickets (const std::vector<std::string>& stops, 
                    const std::vector<int>& routes) 
 {
-    if(stops.size() < 2) return false;
-    if(routes.size() < 1 ) return false;
+    if(check_trip_validity(stops, routes) == false) return false;
     
     std::vector<schedule_point> departure_points (routes.size());
-    std::vector<schedule_point> arrival_points (routes.size());
-
     std::transform(routes.begin(), routes.end(), stops.begin(),
                    departure_points.begin(), create_schedule_point);
-
+                   
+    std::vector<schedule_point> arrival_points (routes.size());
     std::transform(routes.begin(), routes.end(), ++stops.begin(),
                    arrival_points.begin(), create_schedule_point);
                    
-    int last_time = schedule.at(arrival_points.begin());
-    
+    int last_time = schedule.at(arrival_points.front());
     bool no_waiting = true;
     std::string where_needs_to_wait;
     
     for(auto i = departure_points.begin(), j = arrival_points.begin();
         i != departure_points.end(); i++, j++)
     {
-        if(schedule.at(i) < last_time) return false;
-        if(schedule.at(i) != last_time) {
+        if(schedule.at(*i) != last_time) {
             no_waiting = false;
-            where_needs_to_wait = (i).first;
+            where_needs_to_wait = (*i).first;
         }
-        last_time = schedule.at(i);
          
-        if(schedule.at(j) < last_time) return false;
-        last_time = schedule.at(j);
+        last_time = schedule.at(*j);
     }
     
-    // at this point we have verified that the request is formally correct
-    
-    if(no_waiting == false){
-        cout << ":(" << " " << where_needs_to_wait << endl;
-    }
-    
-    std::vector< std::string > optimal_tickets =
-        optimal_ticket_set(last_time - *departure_points.begin());
-
-    if(optimal_tickets.size() == 0) {
-        cout << ":|" << endl;
-    }
-    else{
-        cout << "!" << " " << optimal_tickets.begin();
-        for(auto i = ++optimal_tickets.begin(); i != optimal_tickets.end(); i++){
-            cout << ";" << " " << (*i);
-        }
-        cout << endl;
-    }
+    write_plan(departure_points, arrival_points, no_waiting, where_needs_to_wait);
+    return true;
 }
 
 int main(){
