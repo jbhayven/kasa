@@ -60,6 +60,8 @@ const std::regex TICKET_NAME("[a-zA-Z\\s]+[0-9]?");
 /**
  *  Initializes ressources for 'add_new_ticket' and 'get_optimal_ticket_set'
  *  functions. 
+ * 
+ * @param t_data            The ticket data that will be initialized.
  */
 void initialize_optimal_ticket_set(tickets_data& t_data) {
     std::pair<int, int> default_pair = std::make_pair(INT_MAX, -1);
@@ -398,7 +400,8 @@ std::tuple<int, bool, std::string>
 bool plan_tickets(const std::vector<std::string>& stops, 
                   const std::vector<int>& routes, 
                   const bus_schedule& schedule,
-                  const tickets_data& t_data)
+                  const tickets_data& t_data,
+                  int& tickets_sold)
 {    
     if(check_trip_validity(stops, routes, schedule) == false) return false;
     
@@ -419,6 +422,8 @@ bool plan_tickets(const std::vector<std::string>& stops,
         std::cout << ":|" << std::endl;
     }
     else{
+        tickets_sold += optimal_tickets.size();
+
         std::cout << "!" << " " << optimal_tickets.front();
         
         for(auto i = ++optimal_tickets.begin(); 
@@ -539,7 +544,7 @@ bool parse_and_run_new_ticket(tickets_data& t_data, const std::string& text) {
  *  Converts input to a valid format for the best ticket set function.
  *  And then invokes the function with the given input.
  */
-bool parse_and_run_plan_tickets(routes_data& r_data, tickets_data& t_data, const std::string& text) {
+bool parse_and_run_plan_tickets(routes_data& r_data, tickets_data& t_data, int& tickets_sold, const std::string& text) {
 
     std::vector<int> routes;
     std::vector<std::string> stops;
@@ -557,7 +562,7 @@ bool parse_and_run_plan_tickets(routes_data& r_data, tickets_data& t_data, const
         stops.push_back((*i).str());
 
     // Invokes the function.
-    if (!plan_tickets(stops, routes, r_data.second, t_data))
+    if (!plan_tickets(stops, routes, r_data.second, t_data, tickets_sold))
         return false;
 
     return true;
@@ -586,7 +591,7 @@ bool check_line(const std::string& text, const std::string& reg) {
  *  Checks if the line is in propper format and
  *  if so invokes a corresponding function.
  */
-void process_line(routes_data& r_data, tickets_data& t_data, std::string& line, int line_num) {
+void process_line(routes_data& r_data, tickets_data& t_data, int& tickets_sold, std::string& line, int line_num) {
     bool err = false;
 
     if (check_line(line, NEW_ROUTE_REGEX))
@@ -594,7 +599,7 @@ void process_line(routes_data& r_data, tickets_data& t_data, std::string& line, 
     else if (check_line(line, NEW_TICKET_REGEX))
         err |= !parse_and_run_new_ticket(t_data, line);
     else if (check_line(line, BEST_TICKET_SET_REGEX))
-        err |= !parse_and_run_plan_tickets(r_data, t_data, line);
+        err |= !parse_and_run_plan_tickets(r_data, t_data, tickets_sold, line);
     else
         report_error(line, line_num + 1);
 
@@ -609,6 +614,7 @@ int main() {
 
     routes_data r_data;
     tickets_data t_data;
+    int tickets_sold = 0;
 
     initialize_optimal_ticket_set(t_data);
 
@@ -618,11 +624,12 @@ int main() {
         std::getline(std::cin, line);
 
         if (line.size() != 0)
-            process_line(r_data, t_data, line, line_num);
+            process_line(r_data, t_data, tickets_sold, line, line_num);
 
         line_num++;
     }
 
+    std::cout << tickets_sold << "\n";
 
     return 0;
 }
