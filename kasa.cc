@@ -48,12 +48,12 @@ const int MAX_TRIP_LENGTH = 927;
 const int TICKET_SET_SIZE = 1000;
 
 const std::string NEW_ROUTE_REGEX = "[0-9]+( (5:5[5-9]|([6-9]|1[0-9]|20):[0-5][0-9]|21:([0-1][0-9]|2[0-1])) [_\\^A-Za-z]+)*";
-const std::string NEW_TICKET_REGEX = "[A-Za-z][ A-Za-z]* [1-9][0-9]*\\.[0-9]{2} [1-9][0-9]*";
+const std::string NEW_TICKET_REGEX = "[ A-Za-z]* [1-9][0-9]*\\.[0-9]{2} [1-9][0-9]*";
 const std::string BEST_TICKET_SET_REGEX = "\\?( [_\\^A-Za-z]+ [0-9]+)+ [_\\^A-Za-z]+";
 
 const std::regex NUMBER_REGEX("[0-9]+");
 const std::regex STOP_NAME_REGEX("[a-zA-Z\\^\\_]+");
-const std::regex TICKET_NAME("[a-zA-Z\\s]+[0-9]?");
+const std::regex TICKET_NAME("[ a-zA-Z]+[0-9]?");
 
 // ticket part
 
@@ -415,8 +415,8 @@ bool plan_tickets(const std::vector<std::string>& stops,
         std::cout << ":(" << " " << where_waits << std::endl;
         return true;
     }
-    
-    std::vector< std::string > optimal_tickets = optimal_ticket_set(t_data, trip_time);
+
+    std::vector< std::string > optimal_tickets = optimal_ticket_set(t_data, trip_time + 1);
 
     if(ticket_set_found(optimal_tickets) == false) {
         std::cout << ":|" << std::endl;
@@ -442,7 +442,7 @@ bool plan_tickets(const std::vector<std::string>& stops,
 //Parser part
 
 void report_error(std::string& txt, int line_num) {
-    std::cout << "Error: Wrong input at line " << line_num << ": \"" << txt << "\"\n";
+    std::cerr << "Error in line " << line_num << ":" << txt << "\n";
 }
 
 /**
